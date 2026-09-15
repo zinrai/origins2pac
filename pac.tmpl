@@ -1,0 +1,31 @@
+function FindProxyForURL(url, host) {
+    var proxy = {{printf "%q" .Proxy}};
+{{if .Covered}}
+    // Covered by the networks below:
+{{range .Covered}}    //   {{.}}
+{{end}}{{end}}{{range .Networks}}
+    // {{.CIDR}}
+    if (isInNet(host, {{printf "%q" .Address}}, {{printf "%q" .Mask}})) {
+        return proxy;
+    }
+{{end}}{{if .Origins}}
+    var proxyOrigins = {
+{{range $i, $o := .Origins}}{{if $i}},
+{{end}}{{range $o.Paths}}        // {{.}}
+{{end}}        {{printf "%q" $o.Host}}: [
+{{range $j, $p := $o.Prefixes}}{{if $j}},
+{{end}}            {{printf "%q" $p}}{{end}}
+        ]{{end}}
+    };
+
+    var prefixes = proxyOrigins[host];
+    if (prefixes) {
+        for (var i = 0; i < prefixes.length; i++) {
+            if (url.indexOf(prefixes[i]) === 0) {
+                return proxy;
+            }
+        }
+    }
+{{end}}
+    return "DIRECT";
+}
